@@ -1,0 +1,44 @@
+name: Build
+on:
+  - pull_request
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+          
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            extension: .exe
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.goos }}-${{ matrix.goarch }}
+    env:
+      GOOS: ${{ matrix.goos }}
+      GOARCH: ${{ matrix.goarch }}
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+
+      - name: Checkout
+        uses: actions/checkout@v2
+      
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build
+        run: go build -o dist/para-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.extension }} .
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: para-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.extension }}
+          path: dist/para-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.extension }}
