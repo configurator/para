@@ -1,0 +1,86 @@
+name: Build and release
+on:
+  push:
+    tags:
+      - v*
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+          
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            extension: .exe
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.goos }}-${{ matrix.goarch }}
+    env:
+      GOOS: ${{ matrix.goos }}
+      GOARCH: ${{ matrix.goarch }}
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+
+      - name: Checkout
+        uses: actions/checkout@v2
+      
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build
+        run: go build -o dist/para-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.extension }} .
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: para-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.extension }}
+          path: dist/para-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.extension }}
+  release:
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Create Release
+        id: create-release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+      
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+      
+      - name: Upload release assets
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: para-linux-amd64/para-linux-amd64
+          asset_name: para-linux-amd64
+          asset_content_type: application/x-executable
+      
+      - name: Upload release assets
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: para-darwin-amd64/para-darwin-amd64
+          asset_name: para-darwin-amd64
+          asset_content_type: application/x-mach-executable
+      
+      - name: Upload release assets
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: para-windows-amd64.exe/para-windows-amd64.exe
+          asset_name: para-windows-amd64.exe
+          asset_content_type: application/vnd.microsoft.portable-executable
