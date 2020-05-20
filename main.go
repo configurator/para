@@ -224,6 +224,7 @@ func addRow(row, y0 int, y1 int, columnCount int, width int, viewIndex *int) err
 		if err != nil && err != gocui.ErrUnknownView {
 			return fmt.Errorf("%d %e", *viewIndex, err)
 		}
+		view.Autoscroll = true
 		panels[*viewIndex] = newPanel(view)
 		x0 += columnWidth
 		*viewIndex++
